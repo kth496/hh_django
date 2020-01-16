@@ -2,7 +2,7 @@ env
 *.DS_Store
 *.pyc
 __pycache__
-myapp/settings/**
-!myapp/settings/production.py
+# myapp/settings/**
+# !myapp/settings/production.py
 virtual-venv
 staticfiles
