@@ -10,6 +10,10 @@ class Item(models.Model):
     category = models.CharField(max_length=20)
     ingredients = models.TextField()
     monthlySales = models.IntegerField()
+    oilyScore = models.IntegerField()
+    dryScore = models.IntegerField()
+    sensitiveScore = models.IntegerField()
+    imgUrl = models.CharField(max_length=1, default='')
 
 
 class Ingredients(models.Model):

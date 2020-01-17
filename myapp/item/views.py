@@ -9,43 +9,51 @@ from django.http import Http404
 from myapp.item.models import Item
 from myapp.item.serializers import ItemSerializer
 
-# 페이지네이션 
+# 페이지네이션 커스터마이징
 from rest_framework.pagination import PageNumberPagination
 
-# 필터
-from rest_framework import filters
-from django_filters.rest_framework import DjangoFilterBackend
+class PageNumberPaginationDataOnly(PageNumberPagination):
+    def get_paginated_response(self, data):
+        return Response(data)
 
-
-
-"""
-# 성분을 제외하고 싶다면 다음과 같이 쓴다.
-SELECT ...
-WHERE NOT pub_date > '2005-1-3'
-AND NOT headline = 'Hello'
-
-위 쿼리문을 다음과 같이 쓸 수 있다. exclude를 반복하면 된다.
-Entry.objects.exclude(pub_date__gt=datetime.date(2005, 1, 3)).exclude(headline='Hello')
-
-"""
 
 class ProductList(generics.ListAPIView):
-    queryset = Item.objects.all()
     serializer_class = ItemSerializer
-    pagination_class = PageNumberPagination
-    
-    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
-    filterset_fields = ['category']
-    ordering_fields = ['id']
-
+    pagination_class = PageNumberPaginationDataOnly
 
     def get_queryset(self, *args, **kwargs):
-        return self.queryset
-    
+        # 필요한 데이터 초기화 initialize data
+        queryset = Item.objects.all()
+        givenPrameter = self.request.query_params
+        
+        # 필수사항 필터링 necessary filtering
+        queryset = queryset.order_by('-' + givenPrameter['skin_type'] + 'Score', 'price') 
+        
+        # 선택사항 필터링 selective filtering
+        if 'category' in givenPrameter:
+            queryset = queryset.filter(category = givenPrameter['category'])
+
+        if 'include_ingredient' in givenPrameter:
+            myChoice = givenPrameter['include_ingredient'].split(',')
+            for eachIngredient in myChoice:
+                queryset = queryset.filter(ingredients__contains = eachIngredient)
+
+        if 'exclude_ingredient' in givenPrameter:
+            myChoice = givenPrameter['exclude_ingredient'].split(',')
+            for eachIngredient in myChoice:
+                queryset = queryset.exclude(ingredients__contains = eachIngredient)
+        
+
+        baseURL = "https://grepp-programmers-challenges.s3.ap-northeast-2.amazonaws.com/2020-birdview/thumbnail/"
+        for e in queryset:
+            # print(baseURL + e.imageId)
+            e.imgUrl = baseURL + e.imageId
+        return queryset
+
 
 """
 클래스를 생성할 때 generics.ListAPIView 를 주는 것과 generics.GenericAPIView를 주는 등등의 차이는?
-mixin 과의 차이가 무엇인지도 잘 모르겠음
+mixin 과의 차이가 무엇인지 잘 모르겠음
 
 OrderingFilter 를 사용했음에도 UnorderedObjectListWarning 발생함
 

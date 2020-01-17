@@ -6,5 +6,4 @@ from rest_framework import serializers
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ['id', 'name', 'price', 'gender', 'category',
-                  'ingredients', 'monthlySales', 'imageId']
+        fields = ['id', 'imgUrl', 'name', 'price', 'ingredients', 'monthlySales']
