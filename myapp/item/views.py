@@ -4,12 +4,14 @@ from rest_framework.views import APIView
 from rest_framework import generics
 from rest_framework import mixins
 from django.http import Http404
+from itertools import chain
 
 # model 과 serializer 임포트
 from myapp.item.models import Item
 from myapp.item.serializers import ItemSerializer
+from myapp.item.serializers import ItemSerializerWithId
 
-# 페이지네이션 커스터마이징
+# 페이지네이션 세팅
 from rest_framework.pagination import PageNumberPagination
 
 class PageNumberPaginationDataOnly(PageNumberPagination):
@@ -17,6 +19,7 @@ class PageNumberPaginationDataOnly(PageNumberPagination):
         return Response(data)
 
 
+# 요구사항 View 클래스 
 class ProductList(generics.ListAPIView):
     serializer_class = ItemSerializer
     pagination_class = PageNumberPaginationDataOnly
@@ -43,12 +46,35 @@ class ProductList(generics.ListAPIView):
             for eachIngredient in myChoice:
                 queryset = queryset.exclude(ingredients__contains = eachIngredient)
         
-
+        # 이미지 URL 세팅
         baseURL = "https://grepp-programmers-challenges.s3.ap-northeast-2.amazonaws.com/2020-birdview/thumbnail/"
         for e in queryset:
-            # print(baseURL + e.imageId)
-            e.imgUrl = baseURL + e.imageId
+            e.imgUrl = baseURL + e.imageId + ".jpg"
+
         return queryset
+
+class ProductListWithId(generics.ListAPIView):
+    serializer_class = ItemSerializer
+    pagination_class = PageNumberPaginationDataOnly
+
+    def get_queryset(self, *args, **kwargs):
+        queryset = Item.objects.all()
+        givenId = self.kwargs.get('pk')
+        givenSkinType = self.request.query_params['skin_type']
+
+        queryset = queryset.order_by('-' + givenSkinType + 'Score', 'price')[:3]
+        querysetWithId = Item.objects.filter(id = givenId)
+
+        baseURL = "https://grepp-programmers-challenges.s3.ap-northeast-2.amazonaws.com/2020-birdview/"
+        for e in querysetWithId:
+            e.imgUrl = baseURL + "image/" + e.imageId + ".jpg"
+        for e in queryset:
+            e.imgUrl = baseURL + "thumbnail/" + e.imageId + ".jpg"
+
+        result = list(chain(querysetWithId, queryset))
+        return result
+        
+
 
 
 """
