@@ -53,7 +53,7 @@ def ProductListWithMainId(request, pk):
     if request.method == 'GET':
         # 주어진 ID값을 pk로 필터링, 서브로 주어지는 3개 데이터는 요구사항에 맞게 필터링
         mainItem = ItemModels.Item.objects.filter(id = pk)
-        subList = ItemModels.Item.objects.all().order_by('-' + request.query_params['skin_type'] + 'Score', 'price')[:3]
+        subList = ItemModels.Item.objects.exclude(id = pk).order_by('-' + request.query_params['skin_type'] + 'Score', 'price')[:3]
 
         # Response의 형태가 다르기 때문에 각 데이터에 맞는 시리얼라이저를 따로 만들어서 사용
         mainSerializer =  DetailPageModelMainSerializer(mainItem, many=True)
