@@ -1,4 +1,5 @@
 # 주어진 json 데이터를 manage.py loaddata로 불러올 수 있도록 변형하는 코드
+# 일반적인 json 형태로 주어진 데이터를 model, fields 키 값으로 분리해서 재구성하는 작업을 수행함
 
 import json
 import pathlib

@@ -1,32 +1,30 @@
-from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.decorators import api_view
 from rest_framework.views import APIView
 from rest_framework import generics
-from rest_framework import mixins
-from django.http import Http404
 from itertools import chain
 
 # model 과 serializer 임포트
-from myapp.item.models import Item
+import myapp.item.models as ItemModels
 from myapp.item.serializers import ItemSerializer
-from myapp.item.serializers import ItemSerializerWithId
+from myapp.item.serializers import DetailPageModelMainSerializer
+from myapp.item.serializers import DetailPageModelSubSerializer
 
-# 페이지네이션 세팅
+# 페이지네이션 
 from rest_framework.pagination import PageNumberPagination
-
 class PageNumberPaginationDataOnly(PageNumberPagination):
     def get_paginated_response(self, data):
         return Response(data)
 
 
-# 요구사항 View 클래스 
 class ProductList(generics.ListAPIView):
+    # 시리얼라이저와 페이지네이션 설정
     serializer_class = ItemSerializer
     pagination_class = PageNumberPaginationDataOnly
 
     def get_queryset(self, *args, **kwargs):
         # 필요한 데이터 초기화 initialize data
-        queryset = Item.objects.all()
+        queryset = ItemModels.Item.objects.all()
         givenPrameter = self.request.query_params
         
         # 필수사항 필터링 necessary filtering
@@ -46,54 +44,20 @@ class ProductList(generics.ListAPIView):
             for eachIngredient in myChoice:
                 queryset = queryset.exclude(ingredients__contains = eachIngredient)
         
-        # 이미지 URL 세팅
-        baseURL = "https://grepp-programmers-challenges.s3.ap-northeast-2.amazonaws.com/2020-birdview/thumbnail/"
-        for e in queryset:
-            e.imgUrl = baseURL + e.imageId + ".jpg"
-
         return queryset
 
-class ProductListWithId(generics.ListAPIView):
-    serializer_class = ItemSerializer
-    pagination_class = PageNumberPaginationDataOnly
 
-    def get_queryset(self, *args, **kwargs):
-        queryset = Item.objects.all()
-        givenId = self.kwargs.get('pk')
-        givenSkinType = self.request.query_params['skin_type']
+# 서로 다른 형태의 데이터를 조합해서 보내기위해 부득이하게 함수형으로 view 작성
+@api_view(['GET'])
+def ProductListWithMainId(request, pk):
+    if request.method == 'GET':
+        # 주어진 ID값을 pk로 필터링, 서브로 주어지는 3개 데이터는 요구사항에 맞게 필터링
+        mainItem = ItemModels.Item.objects.filter(id = pk)
+        subList = ItemModels.Item.objects.all().order_by('-' + request.query_params['skin_type'] + 'Score', 'price')[:3]
 
-        queryset = queryset.order_by('-' + givenSkinType + 'Score', 'price')[:3]
-        querysetWithId = Item.objects.filter(id = givenId)
+        # Response의 형태가 다르기 때문에 각 데이터에 맞는 시리얼라이저를 따로 만들어서 사용
+        mainSerializer =  DetailPageModelMainSerializer(mainItem, many=True)
+        subSerializer = DetailPageModelSubSerializer(subList, many=True)
 
-        baseURL = "https://grepp-programmers-challenges.s3.ap-northeast-2.amazonaws.com/2020-birdview/"
-        for e in querysetWithId:
-            e.imgUrl = baseURL + "image/" + e.imageId + ".jpg"
-        for e in queryset:
-            e.imgUrl = baseURL + "thumbnail/" + e.imageId + ".jpg"
-
-        result = list(chain(querysetWithId, queryset))
-        return result
-        
-
-
-
-"""
-클래스를 생성할 때 generics.ListAPIView 를 주는 것과 generics.GenericAPIView를 주는 등등의 차이는?
-mixin 과의 차이가 무엇인지 잘 모르겠음
-
-OrderingFilter 를 사용했음에도 UnorderedObjectListWarning 발생함
-
-"""
-
-"""
-참고자료
-1. 필터링 관련 블로그 자료, 잘 작동은 안됨 GenericViewSet을 사용함
-https://show-me-the-money.tistory.com/42
-
-2. 필터링 관련 블로그 자료 2, 여기가 그나마 나음, 이 블로그에서 사용한 쿼리를 몰라서 100%활용은 불가
-https://uiandwe.tistory.com/1156
-
-3. DRF Filtering 공식문서
-https://www.django-rest-framework.org/api-guide/filtering/#setting-filter-backends
-
-"""
+        # 구한 데이터를 합쳐서 리턴
+        return Response(mainSerializer.data + subSerializer.data)

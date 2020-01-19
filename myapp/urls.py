@@ -1,5 +1,4 @@
 from django.urls import include, path
-
 from myapp.home import views as home_views
 
 urlpatterns = [

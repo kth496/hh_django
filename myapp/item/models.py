@@ -1,6 +1,6 @@
 from django.db import models
 
-
+# 성분에 의한 피부타입 점수를 미리 계산했으므로 제품 정보만 DB에 올려서 사용한다
 class Item(models.Model):
     id = models.IntegerField(primary_key=True)
     imageId = models.TextField()
@@ -13,11 +13,6 @@ class Item(models.Model):
     oilyScore = models.IntegerField()
     dryScore = models.IntegerField()
     sensitiveScore = models.IntegerField()
-    imgUrl = models.CharField(max_length=1, default='')
 
-
-class Ingredients(models.Model):
-    name = models.TextField()
-    oily = models.CharField(max_length=1)
-    dry = models.CharField(max_length=1)
-    sensitive = models.CharField(max_length=1)
+    class Meta:
+        db_table = 'item_item'
